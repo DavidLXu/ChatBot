@@ -2,6 +2,8 @@
 
 一个可直接部署到 GitHub Pages 的静态聊天页面。
 
+[https://davidlxu.github.io/ChatBot/](https://davidlxu.github.io/ChatBot/)
+
 ## 使用
 
 打开页面后手动填写：
