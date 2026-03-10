@@ -398,6 +398,21 @@
         }
       }
 
+      function extractModelIds(payload) {
+        if (Array.isArray(payload?.models)) {
+          return payload.models.filter((id) => typeof id === "string" && id.trim());
+        }
+
+        if (Array.isArray(payload?.data)) {
+          return payload.data
+            .map((item) => item?.id)
+            .filter((id) => typeof id === "string" && id.trim())
+            .sort((a, b) => a.localeCompare(b));
+        }
+
+        return [];
+      }
+
       async function loadModels() {
         const config = requireConfig(false);
         if (!config) return;
@@ -418,12 +433,13 @@
             throw new Error(data.error || "无法加载模型");
           }
 
+          const modelIds = extractModelIds(data);
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-          const selectedModel = data.models.includes(saved.model) ? saved.model : data.models[0] || "";
-          updateModelOptions(data.models, selectedModel);
+          const selectedModel = modelIds.includes(saved.model) ? saved.model : modelIds[0] || "";
+          updateModelOptions(modelIds, selectedModel);
           persistConfig();
-          subtitleEl.textContent = data.models.length
-            ? `已加载 ${data.models.length} 个模型，请选择后开始聊天。`
+          subtitleEl.textContent = modelIds.length
+            ? `已加载 ${modelIds.length} 个模型，请选择后开始聊天。`
             : "没有读取到可用模型。";
         } catch (error) {
           subtitleEl.textContent = "模型加载失败";
