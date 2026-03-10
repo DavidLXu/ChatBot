@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenAI Compatible Chatbot</title>
+    <style>
+      :root {
+        --bg: #f3efe7;
+        --panel: rgba(255, 252, 246, 0.88);
+        --text: #1c1917;
+        --muted: #6b635c;
+        --line: rgba(28, 25, 23, 0.1);
+        --accent: #c75b12;
+        --accent-dark: #8e3700;
+        --user: #1f3a5f;
+        --assistant: #fff7ed;
+        --shadow: 0 20px 60px rgba(70, 49, 27, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(199, 91, 18, 0.2), transparent 30%),
+          radial-gradient(circle at right, rgba(31, 58, 95, 0.15), transparent 25%),
+          linear-gradient(180deg, #f7f2e9 0%, #efe5d6 100%);
+        min-height: 100vh;
+      }
+
+      .shell {
+        width: min(980px, calc(100vw - 32px));
+        margin: 24px auto;
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--shadow);
+        border-radius: 28px;
+        overflow: hidden;
+      }
+
+      .header {
+        padding: 24px 24px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent-dark);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 5vw, 42px);
+        line-height: 1;
+      }
+
+      .subtitle {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .config {
+        margin-top: 18px;
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(199, 91, 18, 0.16);
+        display: grid;
+        gap: 14px;
+      }
+
+      .recommendation {
+        margin-top: 14px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 248, 240, 0.9);
+        border: 1px solid rgba(199, 91, 18, 0.12);
+        color: #5d534c;
+        line-height: 1.7;
+      }
+
+      .recommendation strong {
+        color: var(--accent-dark);
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 1.2fr 1fr auto;
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label {
+        font-size: 13px;
+        color: var(--accent-dark);
+        font-weight: 600;
+      }
+
+      .field input,
+      .field select,
+      textarea {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.96);
+        font: inherit;
+        color: inherit;
+        outline: none;
+      }
+
+      .field input:focus,
+      .field select:focus,
+      textarea:focus {
+        border-color: rgba(199, 91, 18, 0.45);
+        box-shadow: 0 0 0 4px rgba(199, 91, 18, 0.08);
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .field.action {
+        justify-content: end;
+      }
+
+      .field.action button {
+        white-space: nowrap;
+      }
+
+      .ghost-label {
+        visibility: hidden;
+        user-select: none;
+      }
+
+      .chat {
+        height: min(58vh, 680px);
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .message {
+        max-width: min(80%, 700px);
+        padding: 14px 16px;
+        border-radius: 20px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        animation: rise 180ms ease-out;
+      }
+
+      .message.user {
+        align-self: flex-end;
+        background: var(--user);
+        color: white;
+        border-bottom-right-radius: 8px;
+      }
+
+      .message.assistant {
+        align-self: flex-start;
+        background: var(--assistant);
+        border: 1px solid rgba(199, 91, 18, 0.15);
+        border-bottom-left-radius: 8px;
+      }
+
+      .composer {
+        padding: 18px 24px 24px;
+        border-top: 1px solid var(--line);
+        display: grid;
+        gap: 12px;
+      }
+
+      textarea {
+        min-height: 104px;
+        resize: vertical;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+        color: white;
+        padding: 12px 20px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: calc(100vw - 18px);
+          margin: 9px auto;
+          border-radius: 22px;
+        }
+
+        .header,
+        .chat,
+        .composer {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+
+        .chat {
+          height: 54vh;
+        }
+
+        .config-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .message {
+          max-width: 92%;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="header">
+        <p class="eyebrow">OpenAI Compatible Chatbot</p>
+        <h1>Chat with your own API</h1>
+        <p class="subtitle" id="subtitle">先填写 Base URL 和 API Key，再加载模型开始聊天。具体请查看公司内部AI Coding文档。</p>
+        <section class="config">
+          <div class="config-grid">
+            <div class="field">
+              <label for="baseUrl">Base URL</label>
+              <input id="baseUrl" type="text" placeholder="https://api.lingyaai.cn" />
+            </div>
+            <div class="field">
+              <label for="apiKey">API Key</label>
+              <input id="apiKey" type="password" placeholder="输入你的 API Key" />
+            </div>
+            <div class="field">
+              <label for="model">模型</label>
+              <select id="model">
+                <option value="">请先加载模型</option>
+              </select>
+            </div>
+            <div class="field action">
+              <label class="ghost-label" aria-hidden="true">占位</label>
+              <button type="button" id="loadModels">加载模型</button>
+            </div>
+          </div>
+        </section>
+        <p class="recommendation">
+          <strong>模型推荐：</strong>写代码、软件工程、代码理解、调试和维护，优先选
+          <strong>GPT-5.3 codex</strong>；数据工程、后端、前端、Agent 工具调用、自动化、创作表达与指令遵循，优先选
+          <strong>Claude Opus 4.6</strong>；研究与知识工作适合
+          <strong>GPT-5.2 Pro</strong>；阅读理解、信息抽取、长上下文、多轮一致性和视觉推理适合
+          <strong>GPT-5.2 Thinking</strong>；数学、形式推理、逻辑规划适合
+          <strong>Gemini 3.1 Pro</strong>；知识广度和事实核验优先
+          <strong>Gemini DeepThink</strong>；更自然的协作沟通可选
+          <strong>GPT-4.5</strong>。如果你不确定，代码任务先试 GPT-5.3 codex，通用复杂任务先试 Claude Opus 4.6。
+        </p>
+      </section>
+
+      <section class="chat" id="chat"></section>
+
+      <form class="composer" id="form">
+        <textarea id="prompt" placeholder="输入你的问题，按 Ctrl/Cmd + Enter 发送"></textarea>
+        <div class="actions">
+          <div class="meta" id="status">就绪</div>
+          <button type="submit" id="send">发送</button>
+        </div>
+      </form>
+    </main>
+
+    <script>
+      const chatEl = document.getElementById("chat");
+      const formEl = document.getElementById("form");
+      const promptEl = document.getElementById("prompt");
+      const sendEl = document.getElementById("send");
+      const statusEl = document.getElementById("status");
+      const subtitleEl = document.getElementById("subtitle");
+      const baseUrlEl = document.getElementById("baseUrl");
+      const apiKeyEl = document.getElementById("apiKey");
+      const modelEl = document.getElementById("model");
+      const loadModelsEl = document.getElementById("loadModels");
+
+      const STORAGE_KEY = "chatbot-config";
+      const messages = [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "assistant", content: "你好，先填写 Base URL、API Key，并加载模型，然后开始聊天。" }
+      ];
+
+      function renderMessage(role, content) {
+        const item = document.createElement("div");
+        item.className = `message ${role === "user" ? "user" : "assistant"}`;
+        item.textContent = content;
+        chatEl.appendChild(item);
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }
+
+      function setBusy(busy, text) {
+        sendEl.disabled = busy;
+        promptEl.disabled = busy;
+        statusEl.textContent = text;
+      }
+
+      function readConfig() {
+        return {
+          baseUrl: baseUrlEl.value.trim(),
+          apiKey: apiKeyEl.value.trim(),
+          model: modelEl.value.trim()
+        };
+      }
+
+      function persistConfig() {
+        const { baseUrl, model } = readConfig();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ baseUrl, model }));
+      }
+
+      function restoreConfig() {
+        baseUrlEl.value = "https://api.lingyaai.cn";
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        try {
+          const saved = JSON.parse(raw);
+          baseUrlEl.value = saved.baseUrl || "https://api.lingyaai.cn";
+        } catch {}
+      }
+
+      function requireConfig(needsModel) {
+        const config = readConfig();
+        if (!config.baseUrl || !config.apiKey || (needsModel && !config.model)) {
+          window.alert("请填写 API Key 和 Base URL，并选择模型。");
+          return null;
+        }
+        return config;
+      }
+
+      function updateModelOptions(models, selectedModel = "") {
+        modelEl.innerHTML = "";
+        if (!models.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "没有可用模型";
+          modelEl.appendChild(option);
+          return;
+        }
+
+        for (const modelId of models) {
+          const option = document.createElement("option");
+          option.value = modelId;
+          option.textContent = modelId;
+          if (modelId === selectedModel) {
+            option.selected = true;
+          }
+          modelEl.appendChild(option);
+        }
+      }
+
+      async function loadModels() {
+        const config = requireConfig(false);
+        if (!config) return;
+
+        loadModelsEl.disabled = true;
+        subtitleEl.textContent = "正在加载模型列表...";
+
+        try {
+          const response = await fetch(`${config.baseUrl.replace(/\/+$/, "")}/v1/models`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`
+            }
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "无法加载模型");
+          }
+
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+          const selectedModel = data.models.includes(saved.model) ? saved.model : data.models[0] || "";
+          updateModelOptions(data.models, selectedModel);
+          persistConfig();
+          subtitleEl.textContent = data.models.length
+            ? `已加载 ${data.models.length} 个模型，请选择后开始聊天。`
+            : "没有读取到可用模型。";
+        } catch (error) {
+          subtitleEl.textContent = "模型加载失败";
+          window.alert(`加载模型失败：${error.message}`);
+        } finally {
+          loadModelsEl.disabled = false;
+        }
+      }
+
+      async function sendMessage() {
+        const config = requireConfig(true);
+        if (!config) return;
+
+        const input = promptEl.value.trim();
+        if (!input) return;
+
+        messages.push({ role: "user", content: input });
+        renderMessage("user", input);
+        promptEl.value = "";
+        setBusy(true, "模型正在回复...");
+
+        try {
+          const response = await fetch(`${config.baseUrl.replace(/\/+$/, "")}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${config.apiKey}`
+            },
+            body: JSON.stringify({
+              model: config.model,
+              messages
+            })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "请求失败");
+          }
+
+          messages.push({ role: "assistant", content: data.content });
+          renderMessage("assistant", data.content);
+          subtitleEl.textContent = `当前模型: ${config.model}`;
+          persistConfig();
+          setBusy(false, "就绪");
+          promptEl.focus();
+        } catch (error) {
+          const text = `请求失败：${error.message}`;
+          messages.push({ role: "assistant", content: text });
+          renderMessage("assistant", text);
+          setBusy(false, "发生错误");
+        }
+      }
+
+      formEl.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await sendMessage();
+      });
+
+      promptEl.addEventListener("keydown", async (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+          event.preventDefault();
+          await sendMessage();
+        }
+      });
+
+      loadModelsEl.addEventListener("click", async () => {
+        await loadModels();
+      });
+
+      modelEl.addEventListener("change", () => {
+        persistConfig();
+      });
+
+      baseUrlEl.addEventListener("blur", () => {
+        persistConfig();
+      });
+
+      restoreConfig();
+      updateModelOptions([]);
+      renderMessage("assistant", messages[1].content);
+    </script>
+  </body>
+</html>
