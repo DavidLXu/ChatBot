@@ -3,99 +3,261 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenAI Compatible Chatbot</title>
+    <title>ChatBot</title>
+    <script type="module">
+      import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+      import mammoth from "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/+esm";
+      import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+      import JSZip from "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm";
+      import Tesseract from "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/+esm";
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+      window.pdfjsLib = pdfjsLib;
+      window.mammoth = mammoth;
+      window.XLSX = XLSX;
+      window.JSZip = JSZip;
+      window.Tesseract = Tesseract;
+    </script>
     <style>
       :root {
-        --bg: #f3efe7;
-        --panel: rgba(255, 252, 246, 0.88);
-        --text: #1c1917;
-        --muted: #6b635c;
-        --line: rgba(28, 25, 23, 0.1);
-        --accent: #c75b12;
-        --accent-dark: #8e3700;
-        --user: #1f3a5f;
-        --assistant: #fff7ed;
-        --shadow: 0 20px 60px rgba(70, 49, 27, 0.14);
+        --bg: #f7f7f8;
+        --panel: #ffffff;
+        --panel-soft: #ffffff;
+        --panel-border: #e5e5e5;
+        --text: #1f1f1f;
+        --muted: #6b6b6b;
+        --muted-strong: #4a4a4a;
+        --accent: #111111;
+        --hover: #f1f1f1;
+        --assistant: #ffffff;
+        --user: #f5f5f5;
+        --input: #ffffff;
+        --danger: #ff6b6b;
+        --button-bg: #111111;
+        --button-text: #ffffff;
+        --sidebar-button-border: #d8d8d8;
+        --input-border: #d9d9d9;
+        --topbar-bg: rgba(247, 247, 248, 0.94);
+        --composer-grad-top: rgba(247, 247, 248, 0.35);
+        --composer-grad-bottom: rgba(247, 247, 248, 1);
+        --avatar-bg: #e5e7eb;
+        --avatar-text: #111111;
+        --user-avatar-bg: #dbe4ff;
+        --user-avatar-text: #243c9a;
+        --delete-hover-bg: #fee2e2;
+        --footer-note: #8e8e8e;
+      }
+
+      body[data-theme="dark"] {
+        --bg: #212121;
+        --panel: #171717;
+        --panel-soft: #1f1f1f;
+        --panel-border: #2f2f2f;
+        --text: #ececec;
+        --muted: #a0a0a0;
+        --muted-strong: #c7c7c7;
+        --accent: #ffffff;
+        --hover: #2a2a2a;
+        --assistant: #2f2f2f;
+        --user: #303030;
+        --input: #2b2b2b;
+        --button-bg: #ffffff;
+        --button-text: #111111;
+        --sidebar-button-border: #3b3b3b;
+        --input-border: #3a3a3a;
+        --topbar-bg: rgba(33, 33, 33, 0.96);
+        --composer-grad-top: rgba(33, 33, 33, 0.35);
+        --composer-grad-bottom: rgba(33, 33, 33, 1);
+        --avatar-bg: #343541;
+        --avatar-text: #ffffff;
+        --user-avatar-bg: #4f46e5;
+        --user-avatar-text: #ffffff;
+        --delete-hover-bg: #3a2424;
+        --footer-note: #8e8e8e;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
-        font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+        min-height: 100%;
+        background: var(--bg);
         color: var(--text);
-        background:
-          radial-gradient(circle at top left, rgba(199, 91, 18, 0.2), transparent 30%),
-          radial-gradient(circle at right, rgba(31, 58, 95, 0.15), transparent 25%),
-          linear-gradient(180deg, #f7f2e9 0%, #efe5d6 100%);
-        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      .shell {
-        width: min(980px, calc(100vw - 32px));
-        margin: 24px auto;
-        background: var(--panel);
-        border: 1px solid rgba(255, 255, 255, 0.55);
-        backdrop-filter: blur(14px);
-        box-shadow: var(--shadow);
-        border-radius: 28px;
+      body {
+        height: 100vh;
         overflow: hidden;
       }
 
-      .header {
-        padding: 24px 24px 18px;
-        border-bottom: 1px solid var(--line);
+      .app {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        height: 100vh;
       }
 
-      .eyebrow {
-        margin: 0 0 8px;
+      .sidebar {
+        background: var(--panel);
+        border-right: 1px solid var(--panel-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .sidebar-header {
+        padding: 14px 12px 10px;
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      .brand {
+        padding: 0 6px 12px;
+        font-size: 14px;
+        color: var(--muted-strong);
+      }
+
+      .new-chat {
+        width: 100%;
+        border: 1px solid var(--sidebar-button-border);
+        background: transparent;
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .new-chat:hover {
+        background: var(--hover);
+      }
+
+      .conversation-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 10px 8px 12px;
+      }
+
+      .sidebar-footer {
+        padding: 10px 12px 14px;
+        border-top: 1px solid var(--panel-border);
+      }
+
+      .export-chat {
+        width: 100%;
+        border: 1px solid var(--sidebar-button-border);
+        background: transparent;
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .export-chat:hover {
+        background: var(--hover);
+      }
+
+      .conversation-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 10px 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        margin-bottom: 4px;
+      }
+
+      .conversation-item:hover,
+      .conversation-item.active {
+        background: var(--hover);
+      }
+
+      .conversation-text {
+        min-width: 0;
+        text-align: left;
+      }
+
+      .conversation-title,
+      .conversation-preview {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .conversation-title {
+        font-size: 14px;
+      }
+
+      .conversation-preview {
         font-size: 12px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--accent-dark);
+        color: var(--muted);
+        margin-top: 4px;
       }
 
-      h1 {
-        margin: 0;
-        font-size: clamp(28px, 5vw, 42px);
+      .delete-chat {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 18px;
         line-height: 1;
+        padding: 4px 6px;
+        border-radius: 8px;
+      }
+
+      .delete-chat:hover {
+        background: var(--delete-hover-bg);
+        color: var(--danger);
+      }
+
+      .main {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        min-height: 0;
+        background: var(--bg);
+      }
+
+      .topbar {
+        border-bottom: 1px solid var(--panel-border);
+        padding: 18px 24px 16px;
+        background: var(--topbar-bg);
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .page-title {
+        font-size: 18px;
+        font-weight: 600;
       }
 
       .subtitle {
-        margin: 10px 0 0;
+        margin-top: 6px;
         color: var(--muted);
+        font-size: 13px;
       }
 
-      .config {
-        margin-top: 18px;
-        padding: 18px;
-        border-radius: 22px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(199, 91, 18, 0.16);
+      .config-card {
+        margin-top: 16px;
         display: grid;
-        gap: 14px;
-      }
-
-      .recommendation {
-        margin-top: 14px;
-        padding: 16px 18px;
-        border-radius: 18px;
-        background: rgba(255, 248, 240, 0.9);
-        border: 1px solid rgba(199, 91, 18, 0.12);
-        color: #5d534c;
-        line-height: 1.7;
-      }
-
-      .recommendation strong {
-        color: var(--accent-dark);
-      }
-
-      .config-grid {
-        display: grid;
-        grid-template-columns: 1.35fr 1.2fr 1fr auto;
+        grid-template-columns: 1.25fr 1.1fr 0.9fr auto;
         gap: 12px;
+        align-items: end;
       }
 
       .field {
@@ -103,172 +265,457 @@
         gap: 8px;
       }
 
-      .field label {
-        font-size: 13px;
-        color: var(--accent-dark);
-        font-weight: 600;
+      .field.toggle {
+        display: flex;
+        align-items: center;
+        min-height: auto;
       }
 
-      .field input,
+      .field label {
+        color: var(--muted-strong);
+        font-size: 12px;
+      }
+
+      .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.5em;
+        color: var(--muted-strong);
+        cursor: pointer;
+        user-select: none;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .toggle-label input {
+        width: 1.5em;
+        height: 1.5em;
+        margin: 0;
+        flex: 0 0 auto;
+        accent-color: #1677ff;
+        appearance: auto;
+        -webkit-appearance: checkbox;
+        vertical-align: text-bottom;
+      }
+
+      .field input:not([type="checkbox"]),
       .field select,
-      textarea {
+      .composer textarea {
         width: 100%;
-        padding: 14px 16px;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid var(--input-border);
+        background: var(--input);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-height: 46px;
         font: inherit;
-        color: inherit;
+        line-height: 1.2;
         outline: none;
       }
 
-      .field input:focus,
-      .field select:focus,
-      textarea:focus {
-        border-color: rgba(199, 91, 18, 0.45);
-        box-shadow: 0 0 0 4px rgba(199, 91, 18, 0.08);
+      .field select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        padding-right: 40px;
+        background-image:
+          linear-gradient(45deg, transparent 50%, #9a9a9a 50%),
+          linear-gradient(135deg, #9a9a9a 50%, transparent 50%);
+        background-position:
+          calc(100% - 18px) calc(50% - 3px),
+          calc(100% - 12px) calc(50% - 3px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
       }
 
-      .actions {
+      .field input:not([type="checkbox"]):focus,
+      .field select:focus,
+      .composer textarea:focus {
+        border-color: #5a5a5a;
+      }
+
+      .load-models {
+        height: 46px;
+        align-self: end;
+      }
+
+      .ocr-row {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        align-items: center;
+      }
+
+      .model-guide {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .model-guide strong {
+        color: var(--text);
+      }
+
+      .chat {
+        overflow-y: auto;
+        padding: 22px 0 32px;
+      }
+
+      .empty-state,
+      .message {
+        width: min(860px, calc(100% - 32px));
+        margin: 0 auto 18px;
+      }
+
+      .empty-state {
+        margin-top: 48px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty-state h2 {
+        margin: 0 0 10px;
+        font-size: clamp(26px, 4vw, 34px);
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .message {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 13px;
+        font-weight: 700;
+        background: var(--avatar-bg);
+        color: var(--avatar-text);
+      }
+
+      .message.user .avatar {
+        background: var(--user-avatar-bg);
+        color: var(--user-avatar-text);
+      }
+
+      .bubble {
+        padding: 14px 16px;
+        border-radius: 16px;
+        line-height: 1.75;
+        white-space: pre-wrap;
+        background: var(--assistant);
+      }
+
+      .bubble-text {
+        white-space: pre-wrap;
+      }
+
+      .message-attachments {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .message-attachment {
+        display: grid;
+        gap: 8px;
+        max-width: 240px;
+      }
+
+      .message-image {
+        width: 100%;
+        max-width: 220px;
+        border-radius: 14px;
+        display: block;
+        border: 1px solid var(--input-border);
+      }
+
+      .message-file {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        min-width: 180px;
+        max-width: 240px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--input-border);
+        background: var(--bg);
+      }
+
+      .message-file-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--hover);
+        color: var(--muted-strong);
+      }
+
+      .message-file-name,
+      .message-file-note {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .message-file-name {
+        font-size: 12px;
+      }
+
+      .message-file-note {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .message.user .bubble {
+        background: var(--user);
+      }
+
+      .composer-shell {
+        border-top: 1px solid var(--panel-border);
+        padding: 16px 20px 20px;
+        background: linear-gradient(180deg, var(--composer-grad-top), var(--composer-grad-bottom) 26%);
+      }
+
+      .composer {
+        width: min(860px, 100%);
+        margin: 0 auto;
+      }
+
+      .composer-frame {
+        background: var(--panel-soft);
+        border: 1px solid var(--input-border);
+        border-radius: 20px;
+        padding: 12px;
+      }
+
+      .composer-frame.dragover {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      }
+
+      .composer textarea {
+        resize: none;
+        min-height: 82px;
+        border: 0;
+        padding: 10px 8px 14px;
+        background: transparent;
+      }
+
+      .attachments {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 4px 4px 10px;
+      }
+
+      .attachment-chip {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 8px;
+        align-items: center;
+        max-width: 220px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--input-border);
+        background: var(--bg);
+      }
+
+      .attachment-preview {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: var(--hover);
+      }
+
+      .attachment-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        background: var(--hover);
+        color: var(--muted-strong);
+      }
+
+      .attachment-meta {
+        min-width: 0;
+      }
+
+      .attachment-name,
+      .attachment-note {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .attachment-name {
+        font-size: 12px;
+      }
+
+      .attachment-note {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .attachment-remove {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        padding: 0;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 0;
+        min-width: auto;
+      }
+
+      .composer-actions {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        position: relative;
+        z-index: 2;
       }
 
-      .meta {
+      .status {
         color: var(--muted);
-        font-size: 14px;
+        font-size: 13px;
+        padding-left: 6px;
       }
 
-      .field.action {
-        justify-content: end;
-      }
-
-      .field.action button {
-        white-space: nowrap;
-      }
-
-      .ghost-label {
-        visibility: hidden;
-        user-select: none;
-      }
-
-      .chat {
-        height: min(58vh, 680px);
-        overflow-y: auto;
-        padding: 24px;
+      .composer-tools {
         display: flex;
-        flex-direction: column;
-        gap: 16px;
+        align-items: center;
+        gap: 10px;
       }
 
-      .message {
-        max-width: min(80%, 700px);
-        padding: 14px 16px;
-        border-radius: 20px;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        animation: rise 180ms ease-out;
+      .attach-button {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--input-border);
       }
 
-      .message.user {
-        align-self: flex-end;
-        background: var(--user);
-        color: white;
-        border-bottom-right-radius: 8px;
-      }
-
-      .message.assistant {
-        align-self: flex-start;
-        background: var(--assistant);
-        border: 1px solid rgba(199, 91, 18, 0.15);
-        border-bottom-left-radius: 8px;
-      }
-
-      .composer {
-        padding: 18px 24px 24px;
-        border-top: 1px solid var(--line);
-        display: grid;
-        gap: 12px;
-      }
-
-      textarea {
-        min-height: 104px;
-        resize: vertical;
+      .drop-hint {
+        font-size: 12px;
+        color: var(--muted);
       }
 
       button {
         border: 0;
+        background: var(--button-bg);
+        color: var(--button-text);
         border-radius: 999px;
-        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-        color: white;
-        padding: 12px 20px;
+        padding: 11px 18px;
         font: inherit;
         cursor: pointer;
       }
 
+      .send-button {
+        min-width: 88px;
+        position: relative;
+        z-index: 3;
+        pointer-events: auto;
+        flex-shrink: 0;
+      }
+
+      .theme-toggle {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--input-border);
+      }
+
+      button:hover {
+        opacity: 0.92;
+      }
+
       button:disabled {
-        opacity: 0.55;
+        opacity: 0.45;
         cursor: wait;
       }
 
-      @keyframes rise {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+      .footer-note {
+        width: min(860px, 100%);
+        margin: 10px auto 0;
+        font-size: 12px;
+        color: var(--footer-note);
+        text-align: center;
       }
 
-      @media (max-width: 720px) {
-        .shell {
-          width: calc(100vw - 18px);
-          margin: 9px auto;
-          border-radius: 22px;
-        }
-
-        .header,
-        .chat,
-        .composer {
-          padding-left: 18px;
-          padding-right: 18px;
-        }
-
-        .chat {
-          height: 54vh;
-        }
-
-        .config-grid {
+      @media (max-width: 900px) {
+        .app {
           grid-template-columns: 1fr;
         }
 
-        .actions {
-          align-items: stretch;
-          flex-direction: column;
+        .sidebar {
+          display: none;
         }
 
-        .message {
-          max-width: 92%;
+        .config-card {
+          grid-template-columns: 1fr;
         }
 
-        button {
+        .load-models {
           width: 100%;
+        }
+
+        .topbar {
+          padding: 16px;
+        }
+
+        .composer-shell {
+          padding: 14px 12px 16px;
+        }
+
+        .message,
+        .empty-state {
+          width: calc(100% - 24px);
         }
       }
     </style>
   </head>
   <body>
-    <main class="shell">
-      <section class="header">
-        <p class="eyebrow">OpenAI Compatible Chatbot</p>
-        <h1>Chat with your own API</h1>
-        <p class="subtitle" id="subtitle">先填写 Base URL 和 API Key，再加载模型开始聊天。具体请查看公司内部AI Coding文档。</p>
-        <section class="config">
-          <div class="config-grid">
+    <main class="app">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="brand">ChatBot</div>
+          <button class="new-chat" type="button" id="newChat">+ 新建对话</button>
+        </div>
+        <div class="conversation-list" id="conversationList"></div>
+        <div class="sidebar-footer">
+          <button class="export-chat" type="button" id="exportChat">导出对话记录</button>
+        </div>
+      </aside>
+
+      <section class="main">
+        <header class="topbar">
+          <div class="topbar-row">
+            <div>
+              <div class="page-title" id="pageTitle">新对话</div>
+              <div class="subtitle" id="subtitle">先填写 Base URL 和 API Key，再加载模型开始聊天。具体请查看公司内部AI Coding文档。</div>
+            </div>
+            <button class="theme-toggle" type="button" id="themeToggle">切换到黑色</button>
+          </div>
+
+          <div class="config-card">
             <div class="field">
               <label for="baseUrl">Base URL</label>
               <input id="baseUrl" type="text" placeholder="https://api.lingyaai.cn" />
@@ -283,65 +730,219 @@
                 <option value="">请先加载模型</option>
               </select>
             </div>
-            <div class="field action">
-              <label class="ghost-label" aria-hidden="true">占位</label>
-              <button type="button" id="loadModels">加载模型</button>
+            <button class="load-models" type="button" id="loadModels">加载模型</button>
+          </div>
+
+          <div class="ocr-row">
+            <div class="field toggle">
+              <label class="toggle-label" for="ocrEnabled">
+                <input id="ocrEnabled" type="checkbox" />
+                <span>启用 OCR</span>
+              </label>
+            </div>
+            <div class="field toggle">
+              <label class="toggle-label" for="fullPageOcr">
+                <input id="fullPageOcr" type="checkbox" />
+                <span>PDF 全页 OCR</span>
+              </label>
             </div>
           </div>
-        </section>
-        <p class="recommendation">
-          <strong>模型推荐：</strong>写代码、软件工程、代码理解、调试和维护，优先选
-          <strong>GPT-5.3 codex</strong>；数据工程、后端、前端、Agent 工具调用、自动化、创作表达与指令遵循，优先选
-          <strong>Claude Opus 4.6</strong>；研究与知识工作适合
-          <strong>GPT-5.2 Pro</strong>；阅读理解、信息抽取、长上下文、多轮一致性和视觉推理适合
-          <strong>GPT-5.2 Thinking</strong>；数学、形式推理、逻辑规划适合
-          <strong>Gemini 3.1 Pro</strong>；知识广度和事实核验优先
-          <strong>Gemini DeepThink</strong>；更自然的协作沟通可选
-          <strong>GPT-4.5</strong>。如果你不确定，代码任务先试 GPT-5.3 codex，通用复杂任务先试 Claude Opus 4.6。
-        </p>
-      </section>
 
-      <section class="chat" id="chat"></section>
+          <div class="model-guide">
+            <strong>模型推荐：</strong>代码、软件工程、调试和维护优先选 <strong>GPT-5.3 codex</strong>；后端、前端、Agent 工具调用和通用复杂任务优先选 <strong>Claude Opus 4.6</strong>；研究工作适合 <strong>GPT-5.2 Pro</strong>；阅读理解、长上下文和视觉推理适合 <strong>GPT-5.2 Thinking</strong>；数学和规划适合 <strong>Gemini 3.1 Pro</strong>；事实核验优先 <strong>Gemini DeepThink</strong>。
+          </div>
+        </header>
 
-      <form class="composer" id="form">
-        <textarea id="prompt" placeholder="输入你的问题，按 Ctrl/Cmd + Enter 发送"></textarea>
-        <div class="actions">
-          <div class="meta" id="status">就绪</div>
-          <button type="submit" id="send">发送</button>
+        <section class="chat" id="chat"></section>
+
+        <div class="composer-shell">
+          <form class="composer" id="form">
+            <div class="composer-frame">
+              <input id="fileInput" type="file" multiple hidden />
+              <div class="attachments" id="attachments"></div>
+              <textarea id="prompt" placeholder="给 ChatBot 发送消息"></textarea>
+              <div class="composer-actions">
+                <div class="composer-tools">
+                  <button class="attach-button" type="button" id="attachButton">上传文件</button>
+                  <div class="drop-hint">支持粘贴、拖入、上传文件</div>
+                </div>
+                <div class="composer-tools">
+                  <div class="status" id="status">就绪</div>
+                  <button class="send-button" type="submit" id="send">发送</button>
+                </div>
+              </div>
+            </div>
+          </form>
+          <div class="footer-note">ChatBot 可能会犯错，请核对重要信息。</div>
         </div>
-      </form>
+      </section>
     </main>
 
     <script>
       const chatEl = document.getElementById("chat");
       const formEl = document.getElementById("form");
+      const composerFrameEl = document.querySelector(".composer-frame");
       const promptEl = document.getElementById("prompt");
       const sendEl = document.getElementById("send");
       const statusEl = document.getElementById("status");
       const subtitleEl = document.getElementById("subtitle");
+      const pageTitleEl = document.getElementById("pageTitle");
       const baseUrlEl = document.getElementById("baseUrl");
       const apiKeyEl = document.getElementById("apiKey");
       const modelEl = document.getElementById("model");
       const loadModelsEl = document.getElementById("loadModels");
+      const ocrEnabledEl = document.getElementById("ocrEnabled");
+      const fullPageOcrEl = document.getElementById("fullPageOcr");
+      const conversationListEl = document.getElementById("conversationList");
+      const newChatEl = document.getElementById("newChat");
+      const exportChatEl = document.getElementById("exportChat");
+      const themeToggleEl = document.getElementById("themeToggle");
+      const fileInputEl = document.getElementById("fileInput");
+      const attachmentsEl = document.getElementById("attachments");
+      const attachButtonEl = document.getElementById("attachButton");
 
-      const STORAGE_KEY = "chatbot-config";
-      const messages = [
-        { role: "system", content: "You are a helpful assistant." },
-        { role: "assistant", content: "你好，先填写 Base URL、API Key，并加载模型，然后开始聊天。" }
-      ];
+      const CONFIG_KEY = "chatbot-config";
+      const CONVERSATIONS_KEY = "chatbot-conversations";
+      const ACTIVE_ID_KEY = "chatbot-active-conversation-id";
+      const THEME_KEY = "chatbot-theme";
+      const SYSTEM_PROMPT = "You are a helpful assistant.";
 
-      function renderMessage(role, content) {
-        const item = document.createElement("div");
-        item.className = `message ${role === "user" ? "user" : "assistant"}`;
-        item.textContent = content;
-        chatEl.appendChild(item);
-        chatEl.scrollTop = chatEl.scrollHeight;
-        return item;
+      let conversations = [];
+      let activeConversationId = null;
+      let pendingAttachments = [];
+
+      function createConversation() {
+        const id = crypto.randomUUID();
+        return {
+          id,
+          title: "新对话",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "assistant", content: "你好，先填写 Base URL、API Key，并加载模型，然后开始聊天。" }
+          ]
+        };
+      }
+
+      function saveConversations() {
+        localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+        localStorage.setItem(ACTIVE_ID_KEY, activeConversationId || "");
+      }
+
+      function loadConversations() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) || "[]");
+          if (Array.isArray(saved) && saved.length) {
+            conversations = saved;
+          }
+        } catch {}
+
+        if (!conversations.length) {
+          const initial = createConversation();
+          conversations = [initial];
+          activeConversationId = initial.id;
+          saveConversations();
+          return;
+        }
+
+        const savedActiveId = localStorage.getItem(ACTIVE_ID_KEY);
+        activeConversationId = conversations.some((item) => item.id === savedActiveId)
+          ? savedActiveId
+          : conversations[0].id;
+      }
+
+      function getActiveConversation() {
+        return conversations.find((item) => item.id === activeConversationId);
+      }
+
+      async function dataUrlToBlob(dataUrl) {
+        const response = await fetch(dataUrl);
+        return response.blob();
+      }
+
+      function formatExportMessage(message) {
+        const role = message.role === "user" ? "User" : "AI";
+        const text = getMessageDisplayText(message);
+        const attachments = Array.isArray(message.attachments) && message.attachments.length
+          ? `\n附件：${message.attachments.map((item) => item.name).join(", ")}`
+          : "";
+        return `[${role}]\n${text || ""}${attachments}`.trim();
+      }
+
+      async function exportConversation() {
+        const conversation = getActiveConversation();
+        if (!conversation) return;
+
+        const timestamp = new Date().toLocaleString("zh-CN");
+        const body = conversation.messages
+          .filter((item) => item.role !== "system")
+          .map((item) => formatExportMessage(item))
+          .join("\n\n");
+        const content = `标题：${conversation.title || "新对话"}\n导出时间：${timestamp}\n\n${body}\n`;
+        const link = document.createElement("a");
+        const safeTitle = (conversation.title || "chat").replace(/[\\/:*?\"<>|]/g, "-");
+        const attachments = conversation.messages.flatMap((item) => item.attachments || []);
+        const exportableAttachments = attachments.filter((item) => item.fileDataUrl);
+
+        if (exportableAttachments.length && window.JSZip) {
+          const zip = new window.JSZip();
+          zip.file("conversation.txt", content);
+          const folder = zip.folder("attachments");
+
+          for (const attachment of exportableAttachments) {
+            const blob = await dataUrlToBlob(attachment.fileDataUrl);
+            folder.file(attachment.name, blob);
+          }
+
+          const zipBlob = await zip.generateAsync({ type: "blob" });
+          link.href = URL.createObjectURL(zipBlob);
+          link.download = `${safeTitle}.zip`;
+        } else {
+          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+          link.href = URL.createObjectURL(blob);
+          link.download = `${safeTitle}.txt`;
+        }
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      }
+
+      function persistConfig() {
+        const config = {
+          baseUrl: baseUrlEl.value.trim(),
+          model: modelEl.value.trim(),
+          ocrEnabled: ocrEnabledEl.checked,
+          fullPageOcr: fullPageOcrEl.checked
+        };
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      }
+
+      function restoreConfig() {
+        baseUrlEl.value = "https://api.lingyaai.cn";
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+          baseUrlEl.value = saved.baseUrl || "https://api.lingyaai.cn";
+          ocrEnabledEl.checked = saved.ocrEnabled !== false;
+          fullPageOcrEl.checked = saved.fullPageOcr !== false;
+        } catch {}
+      }
+
+      function applyTheme(theme) {
+        document.body.dataset.theme = theme;
+        themeToggleEl.textContent = theme === "dark" ? "切换到白色" : "切换到黑色";
+        localStorage.setItem(THEME_KEY, theme);
+      }
+
+      function restoreTheme() {
+        applyTheme(localStorage.getItem(THEME_KEY) || "light");
       }
 
       function setBusy(busy, text) {
         sendEl.disabled = busy;
-        promptEl.disabled = busy;
         statusEl.textContent = text;
       }
 
@@ -351,22 +952,6 @@
           apiKey: apiKeyEl.value.trim(),
           model: modelEl.value.trim()
         };
-      }
-
-      function persistConfig() {
-        const { baseUrl, model } = readConfig();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ baseUrl, model }));
-      }
-
-      function restoreConfig() {
-        baseUrlEl.value = "https://api.lingyaai.cn";
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-
-        try {
-          const saved = JSON.parse(raw);
-          baseUrlEl.value = saved.baseUrl || "https://api.lingyaai.cn";
-        } catch {}
       }
 
       function requireConfig(needsModel) {
@@ -380,10 +965,11 @@
 
       function updateModelOptions(models, selectedModel = "") {
         modelEl.innerHTML = "";
+
         if (!models.length) {
           const option = document.createElement("option");
           option.value = "";
-          option.textContent = "没有可用模型";
+          option.textContent = "点击右侧加载模型";
           modelEl.appendChild(option);
           return;
         }
@@ -436,16 +1022,671 @@
         return extractTextFromContent(payload?.choices?.[0]?.message?.content || payload?.content || "");
       }
 
-      function appendDelta(target, payload) {
-        const delta = payload?.choices?.[0]?.delta?.content;
-        const text = extractTextFromContent(delta);
-        if (text) {
-          target.textContent += text;
-          chatEl.scrollTop = chatEl.scrollHeight;
+      function extractVisibleUserText(message) {
+        if (typeof message.display === "string" && message.display.trim()) {
+          return message.display.trim();
+        }
+
+        if (typeof message.content === "string") {
+          return message.content.trim();
+        }
+
+        if (Array.isArray(message.content)) {
+          const texts = [];
+          for (const part of message.content) {
+            if (part?.type !== "text" || !part.text) continue;
+            const text = String(part.text).trim();
+            if (!text || text.startsWith("[文件:") || text.startsWith("[附加文件:")) {
+              continue;
+            }
+            texts.push(text);
+          }
+          return texts.join("\n").trim();
+        }
+
+        return "";
+      }
+
+      function getMessageDisplayText(message) {
+        if (message.role === "user") {
+          const visibleText = extractVisibleUserText(message);
+          if (visibleText) {
+            return visibleText;
+          }
+
+          if (Array.isArray(message.attachments) && message.attachments.length) {
+            return "";
+          }
+        }
+
+        if (typeof message.display === "string" && message.display.trim()) {
+          return message.display;
+        }
+
+        const text = extractTextFromContent(message.content);
+        if (text.trim()) {
+          return text;
+        }
+
+        if (Array.isArray(message.attachments) && message.attachments.length) {
+          return `已附加 ${message.attachments.length} 个文件`;
+        }
+
+        return "";
+      }
+
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes)) return "";
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function attachmentKind(file) {
+        if (file.type.startsWith("image/")) return "image";
+        if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return "pdf";
+        if (/\.(docx|doc)$/i.test(file.name)) return "word";
+        if (/\.(xlsx|xls|csv)$/i.test(file.name)) return "excel";
+        if (/\.(pptx|ppt)$/i.test(file.name)) return "powerpoint";
+        if (
+          file.type.startsWith("text/") ||
+          /\.(txt|md|mdx|js|ts|tsx|jsx|json|py|java|go|rs|rb|php|html|css|scss|xml|yaml|yml|csv)$/i.test(file.name)
+        ) {
+          return "text";
+        }
+        return "binary";
+      }
+
+      function attachmentBadge(attachment) {
+        if (attachment.kind === "text") return "TXT";
+        if (attachment.kind === "pdf") return "PDF";
+        if (attachment.kind === "word") return "DOC";
+        if (attachment.kind === "excel") return "XLS";
+        if (attachment.kind === "powerpoint") return "PPT";
+
+        const extension = attachment.name.split(".").pop()?.toUpperCase() || "FILE";
+        if (["DOC", "DOCX"].includes(extension)) return "DOC";
+        if (["XLS", "XLSX", "CSV"].includes(extension)) return "XLS";
+        if (["ZIP", "RAR", "7Z", "TAR", "GZ"].includes(extension)) return "ZIP";
+        if (["MP3", "WAV", "M4A"].includes(extension)) return "AUD";
+        if (["MP4", "MOV", "AVI", "WEBM"].includes(extension)) return "VID";
+        return extension.slice(0, 4);
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error(`无法读取文件：${file.name}`));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error(`无法读取文件：${file.name}`));
+          reader.readAsText(file);
+        });
+      }
+
+      function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error(`无法读取文件：${file.name}`));
+          reader.readAsArrayBuffer(file);
+        });
+      }
+
+      function cleanExtractedText(text) {
+        return String(text || "")
+          .replace(/\u0000/g, "")
+          .replace(/[ \t]+\n/g, "\n")
+          .replace(/\n{3,}/g, "\n\n")
+          .replace(/[ \t]{2,}/g, " ")
+          .trim();
+      }
+
+      async function renderPdfPageToCanvas(page, scale = 2) {
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const context = canvas.getContext("2d", { alpha: false });
+        await page.render({ canvasContext: context, viewport }).promise;
+        return canvas;
+      }
+
+      async function runPdfOcr(page) {
+        if (!window.Tesseract) {
+          throw new Error("OCR 组件还没加载完成，请稍后重试。");
+        }
+
+        const canvas = await renderPdfPageToCanvas(page, 2);
+        const result = await window.Tesseract.recognize(canvas, "chi_sim+eng");
+        return cleanExtractedText(result?.data?.text || "");
+      }
+
+      async function extractPdfText(file, options = {}) {
+        if (!window.pdfjsLib) {
+          throw new Error("PDF 解析组件还没加载完成，请稍后重试。");
+        }
+
+        const {
+          ocrEnabled = true,
+          fullPageOcr = true,
+          onProgress = () => {}
+        } = options;
+        const buffer = await readFileAsArrayBuffer(file);
+        const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        const pageCount = pdf.numPages;
+        const chunks = [];
+
+        // 混合提取：优先文字层，文字过少时自动补中文 OCR。
+        for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          const textLayer = cleanExtractedText(
+            content.items
+            .map((item) => item.str || "")
+            .join(" ")
+          );
+
+          let pageText = textLayer;
+          const shouldRunOcr = ocrEnabled && (fullPageOcr || textLayer.length < 40);
+          if (shouldRunOcr) {
+            onProgress(pageNumber, pageCount);
+            const ocrText = await runPdfOcr(page);
+            if (ocrText.length > pageText.length) {
+              pageText = ocrText;
+            }
+          }
+
+          if (pageText) {
+            chunks.push(`[第 ${pageNumber} 页]\n${pageText}`);
+          }
+
+          if (chunks.join("\n\n").length > 120000) {
+            break;
+          }
+        }
+
+        return chunks.join("\n\n").slice(0, 120000);
+      }
+
+      async function extractWordText(file) {
+        const buffer = await readFileAsArrayBuffer(file);
+        const name = file.name.toLowerCase();
+
+        if (name.endsWith(".docx")) {
+          if (!window.mammoth) {
+            throw new Error("Word 解析组件还没加载完成，请稍后重试。");
+          }
+          const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+          return (result.value || "").replace(/\n{3,}/g, "\n\n").trim();
+        }
+
+        throw new Error("当前浏览器版本暂不支持旧版 .doc，请转成 .docx 再上传。");
+      }
+
+      async function extractExcelText(file) {
+        if (!window.XLSX) {
+          throw new Error("Excel 解析组件还没加载完成，请稍后重试。");
+        }
+
+        const buffer = await readFileAsArrayBuffer(file);
+        const workbook = window.XLSX.read(buffer, { type: "array" });
+        const sections = [];
+
+        for (const sheetName of workbook.SheetNames.slice(0, 10)) {
+          const sheet = workbook.Sheets[sheetName];
+          const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+          const text = rows
+            .slice(0, 200)
+            .map((row) => row.join("\t").trim())
+            .filter(Boolean)
+            .join("\n");
+
+          if (text) {
+            sections.push(`[工作表: ${sheetName}]\n${text}`);
+          }
+
+          if (sections.join("\n\n").length > 120000) {
+            break;
+          }
+        }
+
+        return sections.join("\n\n").slice(0, 120000);
+      }
+
+      async function extractPowerPointText(file) {
+        const name = file.name.toLowerCase();
+        if (!name.endsWith(".pptx")) {
+          throw new Error("当前浏览器版本暂不支持旧版 .ppt，请转成 .pptx 再上传。");
+        }
+
+        if (!window.JSZip) {
+          throw new Error("PPT 解析组件还没加载完成，请稍后重试。");
+        }
+
+        const buffer = await readFileAsArrayBuffer(file);
+        const zip = await window.JSZip.loadAsync(buffer);
+        const slideNames = Object.keys(zip.files)
+          .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+        const sections = [];
+        const parser = new DOMParser();
+
+        for (const [index, slideName] of slideNames.slice(0, 30).entries()) {
+          const xml = await zip.file(slideName).async("string");
+          const doc = parser.parseFromString(xml, "application/xml");
+          const texts = Array.from(doc.getElementsByTagName("a:t"))
+            .map((node) => node.textContent || "")
+            .map((text) => text.trim())
+            .filter(Boolean);
+
+          if (texts.length) {
+            sections.push(`[第 ${index + 1} 页幻灯片]\n${texts.join("\n")}`);
+          }
+
+          if (sections.join("\n\n").length > 120000) {
+            break;
+          }
+        }
+
+        return sections.join("\n\n").slice(0, 120000);
+      }
+
+      async function normalizeFile(file) {
+        const kind = attachmentKind(file);
+        const base = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          type: file.type || "application/octet-stream",
+          kind
+        };
+
+        if (kind === "image") {
+          const fileDataUrl = await readFileAsDataUrl(file);
+          return {
+            ...base,
+            previewUrl: fileDataUrl,
+            fileDataUrl,
+            sendable: true
+          };
+        }
+
+        if (kind === "pdf") {
+          try {
+            const fileDataUrl = await readFileAsDataUrl(file);
+            const text = await extractPdfText(file, {
+              ocrEnabled: ocrEnabledEl.checked,
+              fullPageOcr: fullPageOcrEl.checked,
+              onProgress: (current, total) => {
+                statusEl.textContent = `正在识别第 ${current}/${total} 页`;
+              }
+            });
+            return {
+              ...base,
+              fileDataUrl,
+              text,
+              sendable: Boolean(text)
+            };
+          } catch (error) {
+            return {
+              ...base,
+              sendable: false,
+              error: error instanceof Error ? error.message : String(error)
+            };
+          }
+        }
+
+        if (kind === "word") {
+          try {
+            const fileDataUrl = await readFileAsDataUrl(file);
+            const text = await extractWordText(file);
+            return {
+              ...base,
+              fileDataUrl,
+              text,
+              sendable: Boolean(text)
+            };
+          } catch (error) {
+            return {
+              ...base,
+              sendable: false,
+              error: error instanceof Error ? error.message : String(error)
+            };
+          }
+        }
+
+        if (kind === "excel") {
+          try {
+            const fileDataUrl = await readFileAsDataUrl(file);
+            const text = await extractExcelText(file);
+            return {
+              ...base,
+              fileDataUrl,
+              text,
+              sendable: Boolean(text)
+            };
+          } catch (error) {
+            return {
+              ...base,
+              sendable: false,
+              error: error instanceof Error ? error.message : String(error)
+            };
+          }
+        }
+
+        if (kind === "powerpoint") {
+          try {
+            const fileDataUrl = await readFileAsDataUrl(file);
+            const text = await extractPowerPointText(file);
+            return {
+              ...base,
+              fileDataUrl,
+              text,
+              sendable: Boolean(text)
+            };
+          } catch (error) {
+            return {
+              ...base,
+              sendable: false,
+              error: error instanceof Error ? error.message : String(error)
+            };
+          }
+        }
+
+        if (kind === "text") {
+          const fileDataUrl = await readFileAsDataUrl(file);
+          return {
+            ...base,
+            fileDataUrl,
+            text: await readFileAsText(file),
+            sendable: true
+          };
+        }
+
+        const fileDataUrl = await readFileAsDataUrl(file);
+        return {
+          ...base,
+          fileDataUrl,
+          sendable: false
+        };
+      }
+
+      function renderPendingAttachments() {
+        attachmentsEl.innerHTML = "";
+        for (const attachment of pendingAttachments) {
+          const item = document.createElement("div");
+          item.className = "attachment-chip";
+          const visual = renderAttachmentVisual(attachment, true);
+          const note = attachment.kind === "image"
+            ? formatBytes(attachment.size)
+            : attachment.kind === "pdf"
+              ? attachment.text
+                ? `${formatBytes(attachment.size)} · PDF 已提取/OCR`
+                : `${formatBytes(attachment.size)} · PDF 解析失败`
+            : ["word", "excel", "powerpoint"].includes(attachment.kind)
+              ? attachment.text
+                ? `${formatBytes(attachment.size)} · 已提取内容`
+                : `${formatBytes(attachment.size)} · ${attachment.error || "解析失败"}`
+            : attachment.kind === "text"
+              ? `${formatBytes(attachment.size)} · 文本可发送`
+              : `${formatBytes(attachment.size)} · 仅附带说明`;
+          item.innerHTML = `
+            ${visual}
+            <div class="attachment-meta">
+              <div class="attachment-name">${attachment.name}</div>
+              <div class="attachment-note">${note}</div>
+            </div>
+          `;
+
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "attachment-remove";
+          remove.textContent = "×";
+          remove.addEventListener("click", () => {
+            pendingAttachments = pendingAttachments.filter((item) => item.id !== attachment.id);
+            renderPendingAttachments();
+          });
+          item.appendChild(remove);
+          attachmentsEl.appendChild(item);
         }
       }
 
-      async function readStreamingResponse(response, target) {
+      async function addFiles(fileList) {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+
+        const normalized = [];
+        for (const file of files) {
+          normalized.push(await normalizeFile(file));
+        }
+        pendingAttachments = [...pendingAttachments, ...normalized];
+        renderPendingAttachments();
+      }
+
+      function buildUserMessagePayload(text, attachments) {
+        const parts = [];
+        if (text) {
+          parts.push({ type: "text", text });
+        }
+
+        for (const attachment of attachments) {
+          if (attachment.kind === "image" && attachment.previewUrl) {
+            parts.push({
+              type: "image_url",
+              image_url: {
+                url: attachment.previewUrl
+              }
+            });
+            continue;
+          }
+
+          if (["text", "pdf", "word", "excel", "powerpoint"].includes(attachment.kind) && attachment.text) {
+            parts.push({
+              type: "text",
+              text: `\n\n[文件: ${attachment.name}]\n${attachment.text}`
+            });
+            continue;
+          }
+
+          parts.push({
+            type: "text",
+            text: `\n\n[附加文件: ${attachment.name}, 类型: ${attachment.type}, 大小: ${formatBytes(attachment.size)}。该文件为二进制，当前浏览器版本未直接内联内容。]`
+          });
+        }
+
+        if (parts.length === 0) {
+          return text;
+        }
+
+        return parts;
+      }
+
+      function renderAttachmentVisual(attachment, compact = false) {
+        if (attachment.kind === "image" && attachment.previewUrl) {
+          return compact
+            ? `<img class="attachment-preview" src="${attachment.previewUrl}" alt="${attachment.name}" />`
+            : `
+              <div class="message-attachment">
+                <img class="message-image" src="${attachment.previewUrl}" alt="${attachment.name}" />
+                <div class="message-file-note">${attachment.name} · ${formatBytes(attachment.size)}</div>
+              </div>
+            `;
+        }
+
+        const badge = attachmentBadge(attachment);
+        if (compact) {
+          return `<div class="attachment-icon">${badge}</div>`;
+        }
+
+        const note = attachment.kind === "text"
+          ? `${formatBytes(attachment.size)} · 文本`
+          : attachment.kind === "pdf"
+            ? attachment.text
+              ? `${formatBytes(attachment.size)} · PDF 已提取/OCR`
+              : `${formatBytes(attachment.size)} · PDF 未提取`
+          : ["word", "excel", "powerpoint"].includes(attachment.kind)
+            ? attachment.text
+              ? `${formatBytes(attachment.size)} · 已提取`
+              : `${formatBytes(attachment.size)} · ${attachment.error || "未提取"}`
+          : `${formatBytes(attachment.size)} · ${attachment.type || "文件"}`;
+        return `
+          <div class="message-file">
+            <div class="message-file-icon">${badge}</div>
+            <div>
+              <div class="message-file-name">${attachment.name}</div>
+              <div class="message-file-note">${note}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      function pickDefaultModel(models, savedModel = "") {
+        if (models.includes("gpt-5.4")) {
+          return "gpt-5.4";
+        }
+
+        if (savedModel && models.includes(savedModel)) {
+          return savedModel;
+        }
+
+        return models[0] || "";
+      }
+
+      function inferTitle(messages) {
+        const firstUser = messages.find((item) => item.role === "user");
+        const text = getMessageDisplayText(firstUser || {});
+        if (!text) {
+          return "新对话";
+        }
+
+        return text.replace(/\s+/g, " ").trim().slice(0, 24) || "新对话";
+      }
+
+      function renderConversationList() {
+        conversationListEl.innerHTML = "";
+
+        const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+        for (const conversation of sorted) {
+          const row = document.createElement("div");
+          row.className = `conversation-item ${conversation.id === activeConversationId ? "active" : ""}`;
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `conversation-item ${conversation.id === activeConversationId ? "active" : ""}`;
+          button.innerHTML = `
+            <div class="conversation-text">
+              <div class="conversation-title">${conversation.title || "新对话"}</div>
+              <div class="conversation-preview">${(getMessageDisplayText(conversation.messages.find((item) => item.role !== "system") || {}) || "暂无消息").replace(/\n/g, " ")}</div>
+            </div>
+          `;
+          button.addEventListener("click", () => {
+            activeConversationId = conversation.id;
+            saveConversations();
+            renderApp();
+          });
+
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "delete-chat";
+          deleteButton.textContent = "×";
+          deleteButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            removeConversation(conversation.id);
+          });
+
+          row.appendChild(button);
+          row.appendChild(deleteButton);
+          conversationListEl.appendChild(row);
+        }
+      }
+
+      function renderMessages() {
+        const conversation = getActiveConversation();
+        chatEl.innerHTML = "";
+
+        const visibleMessages = conversation.messages.filter((item) => item.role !== "system");
+        if (!visibleMessages.length) {
+          chatEl.innerHTML = `
+            <div class="empty-state">
+              <h2>今天想聊什么？</h2>
+              <div>左侧可以切换不同对话，当前页面风格已经调整为接近 ChatGPT 的布局。</div>
+            </div>
+          `;
+          return;
+        }
+
+        for (const message of visibleMessages) {
+          const item = document.createElement("div");
+          item.className = `message ${message.role === "user" ? "user" : "assistant"}`;
+          item.innerHTML = `
+            <div class="avatar">${message.role === "user" ? "U" : "AI"}</div>
+            <div class="bubble"></div>
+          `;
+          const bubble = item.querySelector(".bubble");
+          const text = getMessageDisplayText(message);
+          if (text) {
+            const textNode = document.createElement("div");
+            textNode.className = "bubble-text";
+            textNode.textContent = text;
+            bubble.appendChild(textNode);
+          }
+
+          if (Array.isArray(message.attachments) && message.attachments.length) {
+            const attachmentWrap = document.createElement("div");
+            attachmentWrap.className = "message-attachments";
+            attachmentWrap.innerHTML = message.attachments.map((attachment) => renderAttachmentVisual(attachment)).join("");
+            bubble.appendChild(attachmentWrap);
+          }
+          chatEl.appendChild(item);
+        }
+
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }
+
+      function renderApp() {
+        const conversation = getActiveConversation();
+        pageTitleEl.textContent = conversation.title || "新对话";
+        renderConversationList();
+        renderMessages();
+      }
+
+      function updateStreamingMessage(conversation, message, content, options = {}) {
+        const {
+          refreshSidebar = false
+        } = options;
+        message.content = content;
+        conversation.updatedAt = Date.now();
+        saveConversations();
+
+        if (conversation.id === activeConversationId) {
+          pageTitleEl.textContent = conversation.title || "新对话";
+          renderMessages();
+          chatEl.scrollTop = chatEl.scrollHeight;
+        }
+
+        if (refreshSidebar) {
+          renderConversationList();
+        }
+      }
+
+      function appendDelta(conversation, message, payload) {
+        const delta = payload?.choices?.[0]?.delta?.content;
+        const text = extractTextFromContent(delta);
+        if (text) {
+          updateStreamingMessage(conversation, message, `${message.content || ""}${text}`);
+        }
+      }
+
+      async function readStreamingResponse(response, conversation, message) {
         if (!response.body) {
           throw new Error("浏览器不支持流式读取。");
         }
@@ -458,10 +1699,10 @@
           const { value, done } = await reader.read();
           buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
 
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          const chunks = buffer.split("\n");
+          buffer = chunks.pop() || "";
 
-          for (const rawLine of lines) {
+          for (const rawLine of chunks) {
             const line = rawLine.trim();
             if (!line || !line.startsWith("data:")) continue;
 
@@ -471,7 +1712,7 @@
             }
 
             try {
-              appendDelta(target, JSON.parse(data));
+              appendDelta(conversation, message, JSON.parse(data));
             } catch {}
           }
 
@@ -498,12 +1739,12 @@
 
           const data = await response.json();
           if (!response.ok) {
-            throw new Error(data.error || "无法加载模型");
+            throw new Error(data.error?.message || data.error || "无法加载模型");
           }
 
           const modelIds = extractModelIds(data);
-          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-          const selectedModel = modelIds.includes(saved.model) ? saved.model : modelIds[0] || "";
+          const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+          const selectedModel = pickDefaultModel(modelIds, saved.model);
           updateModelOptions(modelIds, selectedModel);
           persistConfig();
           subtitleEl.textContent = modelIds.length
@@ -517,17 +1758,68 @@
         }
       }
 
+      function removeConversation(id) {
+        if (conversations.length === 1) {
+          const replacement = createConversation();
+          conversations = [replacement];
+          activeConversationId = replacement.id;
+          saveConversations();
+          renderApp();
+          return;
+        }
+
+        conversations = conversations.filter((item) => item.id !== id);
+        if (!conversations.some((item) => item.id === activeConversationId)) {
+          activeConversationId = conversations[0].id;
+        }
+        saveConversations();
+        renderApp();
+      }
+
+      function startNewConversation() {
+        const conversation = createConversation();
+        conversations.unshift(conversation);
+        activeConversationId = conversation.id;
+        saveConversations();
+        renderApp();
+        promptEl.focus();
+      }
+
       async function sendMessage() {
         const config = requireConfig(true);
         if (!config) return;
 
         const input = promptEl.value.trim();
-        if (!input) return;
+        if (!input && pendingAttachments.length === 0) return;
 
-        messages.push({ role: "user", content: input });
-        renderMessage("user", input);
+        const conversation = getActiveConversation();
+        const attachments = pendingAttachments.map((item) => ({ ...item }));
+        const userPayload = buildUserMessagePayload(input, attachments);
+        const userDisplay = input;
+        conversation.messages.push({
+          role: "user",
+          content: userPayload,
+          display: userDisplay,
+          attachments
+        });
+        conversation.updatedAt = Date.now();
+        conversation.title = inferTitle(conversation.messages);
+        saveConversations();
+        renderApp();
+
         promptEl.value = "";
+        pendingAttachments = [];
+        renderPendingAttachments();
         setBusy(true, "模型正在回复...");
+        const requestMessages = conversation.messages.map((message) => ({ ...message }));
+        const assistantMessage = {
+          role: "assistant",
+          content: "正在生成..."
+        };
+        conversation.messages.push(assistantMessage);
+        conversation.updatedAt = Date.now();
+        saveConversations();
+        renderApp();
 
         try {
           const response = await fetch(`${config.baseUrl.replace(/\/+$/, "")}/v1/chat/completions`, {
@@ -538,43 +1830,43 @@
             },
             body: JSON.stringify({
               model: config.model,
-              messages,
+              messages: requestMessages,
               stream: true
             })
           });
 
-          const assistantEl = renderMessage("assistant", "正在生成...");
           const contentType = response.headers.get("content-type") || "";
 
           if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            assistantEl.textContent = `请求失败：${data.error?.message || data.error || "请求失败"}`;
-            messages.push({ role: "assistant", content: assistantEl.textContent });
-            setBusy(false, "发生错误");
-            return;
+            throw new Error(data.error?.message || data.error || "请求失败");
           }
 
           if (contentType.includes("text/event-stream")) {
-            assistantEl.textContent = "";
-            await readStreamingResponse(response, assistantEl);
+            updateStreamingMessage(conversation, assistantMessage, "");
+            await readStreamingResponse(response, conversation, assistantMessage);
           } else {
             const data = await response.json();
-            assistantEl.textContent = extractAssistantText(data);
+            updateStreamingMessage(conversation, assistantMessage, extractAssistantText(data));
           }
 
-          if (!assistantEl.textContent.trim()) {
-            assistantEl.textContent = "模型没有返回可显示的内容。";
+          if (!assistantMessage.content.trim()) {
+            updateStreamingMessage(conversation, assistantMessage, "模型没有返回可显示的内容。");
           }
 
-          messages.push({ role: "assistant", content: assistantEl.textContent });
+          if (conversation.title === "新对话") {
+            conversation.title = inferTitle(conversation.messages);
+          }
+          saveConversations();
+          renderApp();
           subtitleEl.textContent = `当前模型: ${config.model}`;
           persistConfig();
           setBusy(false, "就绪");
           promptEl.focus();
         } catch (error) {
-          const text = `请求失败：${error.message}`;
-          messages.push({ role: "assistant", content: text });
-          renderMessage("assistant", text);
+          updateStreamingMessage(conversation, assistantMessage, `请求失败：${error.message}`, {
+            refreshSidebar: true
+          });
           setBusy(false, "发生错误");
         }
       }
@@ -591,8 +1883,39 @@
         }
       });
 
+      promptEl.addEventListener("paste", async (event) => {
+        const files = Array.from(event.clipboardData?.files || []);
+        if (!files.length) return;
+        event.preventDefault();
+        await addFiles(files);
+      });
+
       loadModelsEl.addEventListener("click", async () => {
         await loadModels();
+      });
+
+      attachButtonEl.addEventListener("click", () => {
+        fileInputEl.click();
+      });
+
+      fileInputEl.addEventListener("change", async () => {
+        await addFiles(fileInputEl.files);
+        fileInputEl.value = "";
+      });
+
+      composerFrameEl.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        composerFrameEl.classList.add("dragover");
+      });
+
+      composerFrameEl.addEventListener("dragleave", () => {
+        composerFrameEl.classList.remove("dragover");
+      });
+
+      composerFrameEl.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        composerFrameEl.classList.remove("dragover");
+        await addFiles(event.dataTransfer?.files);
       });
 
       modelEl.addEventListener("change", () => {
@@ -603,9 +1926,32 @@
         persistConfig();
       });
 
+      ocrEnabledEl.addEventListener("change", () => {
+        persistConfig();
+      });
+
+      fullPageOcrEl.addEventListener("change", () => {
+        persistConfig();
+      });
+
+      newChatEl.addEventListener("click", () => {
+        startNewConversation();
+      });
+
+      exportChatEl.addEventListener("click", async () => {
+        await exportConversation();
+      });
+
+      themeToggleEl.addEventListener("click", () => {
+        applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+      });
+
+      loadConversations();
       restoreConfig();
+      restoreTheme();
       updateModelOptions([]);
-      renderMessage("assistant", messages[1].content);
+      renderPendingAttachments();
+      renderApp();
     </script>
   </body>
 </html>
