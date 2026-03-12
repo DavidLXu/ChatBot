@@ -118,6 +118,26 @@
         color: var(--muted-strong);
       }
 
+      .sidebar-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 0 6px 12px;
+      }
+
+      .sidebar-close {
+        display: none;
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--input-border);
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 999px;
+        line-height: 1;
+      }
+
       .new-chat {
         width: 100%;
         border: 1px solid var(--sidebar-button-border);
@@ -643,6 +663,17 @@
         border: 1px solid var(--input-border);
       }
 
+      .mobile-actions {
+        display: none;
+        gap: 8px;
+      }
+
+      .mobile-toggle {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--input-border);
+      }
+
       button:hover {
         opacity: 0.92;
       }
@@ -666,19 +697,62 @@
         }
 
         .sidebar {
+          display: flex;
+          position: fixed;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: min(82vw, 320px);
+          z-index: 20;
+          transform: translateX(-100%);
+          transition: transform 160ms ease;
+          box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+        }
+
+        .sidebar-close {
+          display: inline-grid;
+          place-items: center;
+        }
+
+        body[data-mobile-sidebar-open="true"] .sidebar {
+          transform: translateX(0);
+        }
+
+        .mobile-actions {
+          display: flex;
+          flex-wrap: wrap;
+        }
+
+        .topbar {
+          padding: 14px 16px;
+        }
+
+        .config-card,
+        .ocr-row,
+        .model-guide {
           display: none;
         }
 
-        .config-card {
+        body[data-mobile-config-open="true"] .config-card {
+          display: grid;
           grid-template-columns: 1fr;
+          margin-top: 14px;
+        }
+
+        body[data-mobile-config-open="true"] .ocr-row {
+          display: flex;
+        }
+
+        body[data-mobile-config-open="true"] .model-guide {
+          display: block;
+        }
+
+        .theme-toggle {
+          display: none;
         }
 
         .load-models {
           width: 100%;
-        }
-
-        .topbar {
-          padding: 16px;
         }
 
         .composer-shell {
@@ -696,7 +770,10 @@
     <main class="app">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <div class="brand">ChatBot</div>
+          <div class="sidebar-top">
+            <div class="brand">ChatBot</div>
+            <button class="sidebar-close" type="button" id="closeChats">×</button>
+          </div>
           <button class="new-chat" type="button" id="newChat">+ 新建对话</button>
         </div>
         <div class="conversation-list" id="conversationList"></div>
@@ -711,6 +788,10 @@
             <div>
               <div class="page-title" id="pageTitle">新对话</div>
               <div class="subtitle" id="subtitle">先填写 Base URL 和 API Key，再加载模型开始聊天。具体请查看公司内部AI Coding文档。</div>
+              <div class="mobile-actions">
+                <button class="mobile-toggle" type="button" id="openChats">Chats</button>
+                <button class="mobile-toggle" type="button" id="toggleConfig">Models</button>
+              </div>
             </div>
             <button class="theme-toggle" type="button" id="themeToggle">切换到黑色</button>
           </div>
@@ -797,6 +878,9 @@
       const newChatEl = document.getElementById("newChat");
       const exportChatEl = document.getElementById("exportChat");
       const themeToggleEl = document.getElementById("themeToggle");
+      const openChatsEl = document.getElementById("openChats");
+      const closeChatsEl = document.getElementById("closeChats");
+      const toggleConfigEl = document.getElementById("toggleConfig");
       const fileInputEl = document.getElementById("fileInput");
       const attachmentsEl = document.getElementById("attachments");
       const attachButtonEl = document.getElementById("attachButton");
@@ -854,6 +938,17 @@
 
       function getActiveConversation() {
         return conversations.find((item) => item.id === activeConversationId);
+      }
+
+      function setMobileSidebar(open) {
+        document.body.dataset.mobileSidebarOpen = open ? "true" : "false";
+      }
+
+      function setMobileConfig(open) {
+        document.body.dataset.mobileConfigOpen = open ? "true" : "false";
+        if (toggleConfigEl) {
+          toggleConfigEl.textContent = open ? "Hide Models" : "Models";
+        }
       }
 
       async function dataUrlToBlob(dataUrl) {
@@ -1591,6 +1686,7 @@
           button.addEventListener("click", () => {
             activeConversationId = conversation.id;
             saveConversations();
+            setMobileSidebar(false);
             renderApp();
           });
 
@@ -1936,6 +2032,21 @@
 
       newChatEl.addEventListener("click", () => {
         startNewConversation();
+        setMobileSidebar(false);
+      });
+
+      openChatsEl.addEventListener("click", () => {
+        const isOpen = document.body.dataset.mobileSidebarOpen === "true";
+        setMobileSidebar(!isOpen);
+      });
+
+      closeChatsEl.addEventListener("click", () => {
+        setMobileSidebar(false);
+      });
+
+      toggleConfigEl.addEventListener("click", () => {
+        const isOpen = document.body.dataset.mobileConfigOpen === "true";
+        setMobileConfig(!isOpen);
       });
 
       exportChatEl.addEventListener("click", async () => {
@@ -1949,6 +2060,8 @@
       loadConversations();
       restoreConfig();
       restoreTheme();
+      setMobileSidebar(false);
+      setMobileConfig(false);
       updateModelOptions([]);
       renderPendingAttachments();
       renderApp();
