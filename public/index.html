@@ -725,6 +725,8 @@
 
         .topbar {
           padding: 14px 16px;
+          position: relative;
+          z-index: 5;
         }
 
         .config-card,
@@ -745,6 +747,31 @@
 
         body[data-mobile-config-open="true"] .model-guide {
           display: block;
+        }
+
+        body[data-mobile-config-open="true"] .topbar {
+          position: fixed;
+          inset: 0;
+          z-index: 30;
+          overflow-y: auto;
+          padding: 14px 16px 24px;
+          border-bottom: 0;
+          background: var(--bg);
+          backdrop-filter: none;
+        }
+
+        body[data-mobile-config-open="true"] .topbar-row {
+          position: sticky;
+          top: 0;
+          padding-bottom: 12px;
+          background: var(--bg);
+          z-index: 1;
+        }
+
+        body[data-mobile-config-open="true"] .chat,
+        body[data-mobile-config-open="true"] .composer-shell {
+          visibility: hidden;
+          pointer-events: none;
         }
 
         .theme-toggle {
@@ -1846,6 +1873,9 @@
           subtitleEl.textContent = modelIds.length
             ? `已加载 ${modelIds.length} 个模型，请选择后开始聊天。`
             : "没有读取到可用模型。";
+          if (window.innerWidth <= 900) {
+            setMobileConfig(false);
+          }
         } catch (error) {
           subtitleEl.textContent = "模型加载失败";
           window.alert(`加载模型失败：${error.message}`);
@@ -2016,6 +2046,9 @@
 
       modelEl.addEventListener("change", () => {
         persistConfig();
+        if (window.innerWidth <= 900 && modelEl.value) {
+          setMobileConfig(false);
+        }
       });
 
       baseUrlEl.addEventListener("blur", () => {
